@@ -1,0 +1,6 @@
+Flask
+gunicorn
+yfinance
+pytz
+requests
+psycopg2-binary
