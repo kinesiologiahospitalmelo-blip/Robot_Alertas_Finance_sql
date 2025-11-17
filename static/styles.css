@@ -1,0 +1,266 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        sans-serif;
+    background: #020617;
+    color: #e5e7eb;
+}
+
+.topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    background: #0f172a;
+    border-bottom: 1px solid #1f2937;
+}
+
+.topbar h1 {
+    margin: 0;
+    font-size: 1.2rem;
+}
+
+.status-pill {
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: #22c55e22;
+    color: #22c55e;
+    font-size: 0.8rem;
+    border: 1px solid #22c55e55;
+}
+
+.layout {
+    display: flex;
+    min-height: calc(100vh - 50px);
+}
+
+.sidebar {
+    width: 200px;
+    background: #020617;
+    border-right: 1px solid #1f2937;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.sidebar button {
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: none;
+    background: #020617;
+    color: #e5e7eb;
+    text-align: left;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.sidebar button.active {
+    background: #111827;
+    border: 1px solid #1d4ed8;
+}
+
+.sidebar button:hover {
+    background: #111827;
+}
+
+.content {
+    flex: 1;
+    padding: 20px;
+}
+
+h2 {
+    margin-top: 0;
+}
+
+.hint {
+    font-size: 0.9rem;
+    color: #9ca3af;
+    margin-bottom: 12px;
+}
+
+.cards-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.card {
+    background: #020617;
+    border-radius: 12px;
+    padding: 14px;
+    border: 1px solid #1f2937;
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.card-header h3 {
+    margin: 0;
+}
+
+.badge {
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+}
+
+.badge-on {
+    background: #22c55e22;
+    color: #22c55e;
+}
+
+.badge-off {
+    background: #6b728022;
+    color: #9ca3af;
+}
+
+.card-body p {
+    margin: 4px 0;
+    font-size: 0.9rem;
+}
+
+.card-footer {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.card-footer button {
+    flex: 1;
+    padding: 6px 8px;
+    border: none;
+    border-radius: 8px;
+    background: #111827;
+    color: #e5e7eb;
+    cursor: pointer;
+    font-size: 0.8rem;
+}
+
+.card-footer button:hover {
+    background: #1f2937;
+}
+
+.card-footer .danger {
+    background: #7f1d1d;
+}
+
+.card-footer .danger:hover {
+    background: #991b1b;
+}
+
+.form-card {
+    margin-top: 10px;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.85rem;
+    color: #9ca3af;
+}
+
+input {
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid #1f2937;
+    background: #020617;
+    color: #e5e7eb;
+}
+
+input:focus {
+    outline: none;
+    border-color: #2563eb;
+}
+
+.primary-btn,
+.ghost-btn {
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.primary-btn {
+    background: #2563eb;
+    color: #e5e7eb;
+}
+
+.primary-btn:hover {
+    background: #1d4ed8;
+}
+
+.ghost-btn {
+    background: transparent;
+    color: #e5e7eb;
+    border: 1px solid #4b5563;
+}
+
+.ghost-btn:hover {
+    background: #111827;
+}
+
+.btn-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.logs-header {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 10px;
+}
+
+.logs-box {
+    background: #020617;
+    border-radius: 12px;
+    border: 1px solid #1f2937;
+    padding: 10px;
+    height: 300px;
+    overflow: auto;
+    font-size: 0.8rem;
+}
+
+.tab {
+    display: none;
+}
+
+.tab.active {
+    display: block;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .layout {
+        flex-direction: column;
+    }
+    .sidebar {
+        flex-direction: row;
+        width: 100%;
+        overflow-x: auto;
+    }
+    .sidebar button {
+        flex: 1;
+        text-align: center;
+    }
+}

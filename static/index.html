@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Robot Alertas Finance SQL</title>
+
+    <link rel="stylesheet" href="styles.css" />
+
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.json" />
+    <meta name="theme-color" content="#111827" />
+
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png" />
+
+    <script>
+        if ("serviceWorker" in navigator) {
+            navigator.serviceWorker
+                .register("service-worker.js")
+                .then(() => console.log("ServiceWorker registrado"))
+                .catch(err => console.log("Error SW:", err));
+        }
+    </script>
+</head>
+<body>
+    <header class="topbar">
+        <h1>Robot Alertas Finance SQL</h1>
+        <span class="status-pill">Online</span>
+    </header>
+
+    <main class="layout">
+        <aside class="sidebar">
+            <button class="tab-btn active" data-tab="acciones">📊 Acciones</button>
+            <button class="tab-btn" data-tab="telegram">📨 Telegram</button>
+            <button class="tab-btn" data-tab="config">⚙️ Configuración</button>
+            <button class="tab-btn" data-tab="logs">📝 Logs</button>
+        </aside>
+
+        <section class="content">
+            <!-- ACCIONES -->
+            <section id="acciones" class="tab active">
+                <h2>Acciones monitoreadas</h2>
+                <p class="hint">
+                    Configurá precios objetivo de <b>alza</b> y <b>baja</b> con anotaciones personalizadas.
+                </p>
+
+                <div id="acciones-list" class="cards-list"></div>
+
+                <div class="card form-card">
+                    <h3>Agregar / actualizar acción</h3>
+                    <div class="form-grid">
+                        <label>
+                            Ticker
+                            <input id="new-symbol" placeholder="Ej: AAPL" />
+                        </label>
+                        <label>
+                            Precio alza
+                            <input id="new-up" type="number" step="0.01" placeholder="Ej: 200" />
+                        </label>
+                        <label>
+                            Precio baja
+                            <input id="new-down" type="number" step="0.01" placeholder="Ej: 150" />
+                        </label>
+                        <label>
+                            Nota alza
+                            <input id="new-note-up" placeholder="Ej: rompe resistencia semanal" />
+                        </label>
+                        <label>
+                            Nota baja
+                            <input id="new-note-down" placeholder="Ej: stop loss" />
+                        </label>
+                    </div>
+                    <button id="btn-add" class="primary-btn">Guardar acción</button>
+                </div>
+            </section>
+
+            <!-- TELEGRAM -->
+            <section id="telegram" class="tab">
+                <h2>Telegram</h2>
+                <p class="hint">
+                    Ingresá el <b>Bot Token</b> y el <b>Chat ID</b> para recibir las alertas.
+                </p>
+
+                <div class="card form-card">
+                    <label>
+                        Bot Token
+                        <input id="tg-token" placeholder="123456:ABCDEF" />
+                    </label>
+                    <label>
+                        Chat ID
+                        <input id="tg-chat" placeholder="123456789" />
+                    </label>
+
+                    <div class="btn-row">
+                        <button id="btn-save-tg" class="primary-btn">Guardar</button>
+                        <button id="btn-test-tg" class="ghost-btn">Enviar prueba</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- CONFIG -->
+            <section id="config" class="tab">
+                <h2>Configuración general</h2>
+                <div class="card">
+                    <p><b>Horarios de chequeo (hora Argentina):</b> 09:00, 13:00, 16:00</p>
+                    <p>El robot corre en segundo plano en el servidor (thread Python).</p>
+                    <p>La información se guarda en <b>PostgreSQL</b> y no se pierde al reiniciar.</p>
+                </div>
+            </section>
+
+            <!-- LOGS -->
+            <section id="logs" class="tab">
+                <h2>Logs</h2>
+                <p class="hint">
+                    Últimos eventos del servidor y del robot de alertas.
+                </p>
+                <div class="logs-header">
+                    <button id="btn-refresh-logs" class="ghost-btn">Actualizar logs</button>
+                </div>
+                <pre id="logs-box" class="logs-box"></pre>
+            </section>
+        </section>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>
