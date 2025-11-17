@@ -42,8 +42,9 @@ function renderActions(data) {
                 </span>
             </div>
             <div class="card-body">
-                <p><b>Alza:</b> ${info.up}</p>
-                <p><b>Baja:</b> ${info.down}</p>
+                <p><b>Precio base:</b> ${info.base_price ?? "-"}</p>
+                <p><b>Alza (techo):</b> ${info.up}</p>
+                <p><b>Baja (piso):</b> ${info.down}</p>
                 ${
                     info.anotacion_up
                         ? `<p>📝 <b>Nota alza:</b> ${info.anotacion_up}</p>`
@@ -59,8 +60,12 @@ function renderActions(data) {
                 <button onclick="toggleAction('${symbol}', ${!info.active})">
                     ${info.active ? "Desactivar" : "Activar"}
                 </button>
-                <button onclick="prefillAction('${symbol}', ${info.up}, ${info.down}, 
-                    ${JSON.stringify(info.anotacion_up || "")}, 
+                <button onclick="prefillAction(
+                    '${symbol}',
+                    ${info.base_price ?? "null"},
+                    ${info.up},
+                    ${info.down},
+                    ${JSON.stringify(info.anotacion_up || "")},
                     ${JSON.stringify(info.anotacion_down || "")}
                 )">
                     Editar
@@ -88,35 +93,39 @@ function deleteAction(symbol) {
     api("/api/delete", "POST", { symbol: symbol }).then(loadActions);
 }
 
-function prefillAction(symbol, up, down, anot_up, anot_down) {
+function prefillAction(symbol, base_price, up, down, anot_up, anot_down) {
     document.getElementById("new-symbol").value = symbol;
+    document.getElementById("new-base").value = base_price ?? "";
     document.getElementById("new-up").value = up;
     document.getElementById("new-down").value = down;
     document.getElementById("new-note-up").value = anot_up || "";
     document.getElementById("new-note-down").value = anot_down || "";
-    // Te queda listo para "Guardar acción" y se hace upsert
 }
 
+// ================= GUARDAR / EDITAR ACCIÓN =================
 document.getElementById("btn-add").onclick = () => {
     const s = document.getElementById("new-symbol").value.toUpperCase();
+    const b = document.getElementById("new-base").value;
     const u = document.getElementById("new-up").value;
     const d = document.getElementById("new-down").value;
     const nu = document.getElementById("new-note-up").value;
     const nd = document.getElementById("new-note-down").value;
 
-    if (!s || !u || !d) {
-        alert("Ticker, precio alza y precio baja son obligatorios.");
+    if (!s || !b || !u || !d) {
+        alert("Ticker, precio base, precio alza y precio baja son obligatorios.");
         return;
     }
 
     api("/api/add", "POST", {
         symbol: s,
+        base_price: b,
         up: u,
         down: d,
         anotacion_up: nu,
         anotacion_down: nd,
     }).then(() => {
         document.getElementById("new-symbol").value = "";
+        document.getElementById("new-base").value = "";
         document.getElementById("new-up").value = "";
         document.getElementById("new-down").value = "";
         document.getElementById("new-note-up").value = "";
@@ -168,5 +177,4 @@ function loadLogs() {
 
 document.getElementById("btn-refresh-logs").onclick = loadLogs;
 
-// Cargamos logs al entrar al tab por primera vez (simple)
 loadLogs();
