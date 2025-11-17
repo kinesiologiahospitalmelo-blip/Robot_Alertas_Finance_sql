@@ -19,7 +19,7 @@
     <script>
         if ("serviceWorker" in navigator) {
             navigator.serviceWorker
-                .register("/static/service-worker.js")  <!-- RUTA CORREGIDA -->
+                .register("/static/service-worker.js")
                 .then(() => console.log("ServiceWorker registrado"))
                 .catch(err => console.log("Error SW:", err));
         }
@@ -45,7 +45,7 @@
             <section id="acciones" class="tab active">
                 <h2>Acciones monitoreadas</h2>
                 <p class="hint">
-                    Configurá precios objetivo de <b>alza</b> y <b>baja</b> con anotaciones personalizadas.
+                    Configurá <b>precio base</b>, objetivo de <b>alza</b> y <b>baja</b> con anotaciones.
                 </p>
 
                 <div id="acciones-list" class="cards-list"></div>
@@ -53,27 +53,39 @@
                 <div class="card form-card">
                     <h3>Agregar / actualizar acción</h3>
                     <div class="form-grid">
+
+                        <!-- ⭐ NUEVO: PRECIO BASE -->
+                        <label>
+                            Precio base
+                            <input id="new-base" type="number" step="0.01" placeholder="Ej: 20" />
+                        </label>
+
                         <label>
                             Ticker
                             <input id="new-symbol" placeholder="Ej: AAPL" />
                         </label>
+
                         <label>
-                            Precio alza
-                            <input id="new-up" type="number" step="0.01" placeholder="Ej: 200" />
+                            Precio alza (techo)
+                            <input id="new-up" type="number" step="0.01" placeholder="Ej: 30" />
                         </label>
+
                         <label>
-                            Precio baja
-                            <input id="new-down" type="number" step="0.01" placeholder="Ej: 150" />
+                            Precio baja (piso)
+                            <input id="new-down" type="number" step="0.01" placeholder="Ej: 10" />
                         </label>
+
                         <label>
                             Nota alza
                             <input id="new-note-up" placeholder="Ej: rompe resistencia semanal" />
                         </label>
+
                         <label>
                             Nota baja
                             <input id="new-note-down" placeholder="Ej: stop loss" />
                         </label>
                     </div>
+
                     <button id="btn-add" class="primary-btn">Guardar acción</button>
                 </div>
             </section>
@@ -82,7 +94,7 @@
             <section id="telegram" class="tab">
                 <h2>Telegram</h2>
                 <p class="hint">
-                    Ingresá el <b>Bot Token</b> y el <b>Chat ID</b> para recibir las alertas.
+                    Ingresá el <b>Bot Token</b> y el <b>Chat ID</b> para recibir alertas.
                 </p>
 
                 <div class="card form-card">
@@ -107,26 +119,22 @@
                 <h2>Configuración general</h2>
                 <div class="card">
                     <p><b>Horarios de chequeo (hora Argentina):</b> 09:00, 13:00, 16:00</p>
-                    <p>El robot corre en segundo plano en el servidor (thread Python).</p>
-                    <p>La información se guarda en <b>PostgreSQL</b> y no se pierde al reiniciar.</p>
+                    <p>El robot corre 24/7 en segundo plano.</p>
+                    <p>La información se guarda en PostgreSQL y no se pierde al reiniciar.</p>
                 </div>
             </section>
 
             <!-- LOGS -->
             <section id="logs" class="tab">
                 <h2>Logs</h2>
-                <p class="hint">
-                    Últimos eventos del servidor y del robot de alertas.
-                </p>
-                <div class="logs-header">
-                    <button id="btn-refresh-logs" class="ghost-btn">Actualizar logs</button>
-                </div>
+                <p class="hint">Últimos eventos del robot:</p>
+                <button id="btn-refresh-logs" class="ghost-btn">Actualizar logs</button>
                 <pre id="logs-box" class="logs-box"></pre>
             </section>
+
         </section>
     </main>
 
-    <script src="/static/app.js"></script> <!-- RUTA CORREGIDA -->
-
+    <script src="/static/app.js"></script>
 </body>
 </html>
