@@ -1,5 +1,0 @@
-Flask
-yfinance
-pytz
-requests
-gunicorn
