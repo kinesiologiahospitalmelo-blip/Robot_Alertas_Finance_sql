@@ -1,5 +1,3 @@
-<!-- VERSION TEST 999 -->
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -7,24 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Robot Alertas Finance SQL</title>
 
-    <link rel="stylesheet" href="styles.css" />
+    <!-- RUTAS CORREGIDAS -->
+    <link rel="stylesheet" href="/static/styles.css" />
 
     <!-- PWA -->
-    <link rel="manifest" href="manifest.json" />
+    <link rel="manifest" href="/static/manifest.json" />
     <meta name="theme-color" content="#111827" />
 
-    <link rel="icon" type="image/png" sizes="192x192" href="icon_192.png" />
-    <link rel="icon" type="image/png" sizes="512x512" href="icon_512.png" />
+    <!-- ICONOS CORREGIDOS -->
+    <link rel="icon" type="image/png" sizes="192x192" href="/static/icon_192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/static/icon_512.png" />
 
     <script>
         if ("serviceWorker" in navigator) {
             navigator.serviceWorker
-                .register("service-worker.js")
+                .register("/static/service-worker.js")  <!-- RUTA CORREGIDA -->
                 .then(() => console.log("ServiceWorker registrado"))
                 .catch(err => console.log("Error SW:", err));
         }
     </script>
 </head>
+
 <body>
     <header class="topbar">
         <h1>Robot Alertas Finance SQL</h1>
@@ -125,7 +126,7 @@
         </section>
     </main>
 
-    <script src="app.js"></script>
+    <script src="/static/app.js"></script> <!-- RUTA CORREGIDA -->
+
 </body>
 </html>
-
