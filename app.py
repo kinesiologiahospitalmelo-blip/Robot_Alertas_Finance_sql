@@ -46,12 +46,23 @@ def init_db():
     CREATE TABLE IF NOT EXISTS acciones (
         id SERIAL PRIMARY KEY,
         symbol TEXT UNIQUE NOT NULL,
+        base_price NUMERIC,
         up NUMERIC NOT NULL,
         down NUMERIC NOT NULL,
         anotacion_up TEXT,
         anotacion_down TEXT,
+        alert_up_sent BOOLEAN NOT NULL DEFAULT FALSE,
+        alert_down_sent BOOLEAN NOT NULL DEFAULT FALSE,
         active BOOLEAN NOT NULL DEFAULT TRUE
     );
+
+    -- Por si la tabla ya existía con el esquema viejo:
+    ALTER TABLE acciones
+        ADD COLUMN IF NOT EXISTS base_price NUMERIC;
+    ALTER TABLE acciones
+        ADD COLUMN IF NOT EXISTS alert_up_sent BOOLEAN NOT NULL DEFAULT FALSE;
+    ALTER TABLE acciones
+        ADD COLUMN IF NOT EXISTS alert_down_sent BOOLEAN NOT NULL DEFAULT FALSE;
 
     CREATE TABLE IF NOT EXISTS settings (
         id BOOLEAN PRIMARY KEY DEFAULT TRUE,
@@ -127,6 +138,18 @@ def get_settings():
     return {"token": row["token"] or "", "chat_id": row["chat_id"] or ""}
 
 
+def reset_alerts_for_symbol(symbol):
+    """Resetea las banderas de alerta para una acción (por si se ajusta la configuración)."""
+    conn = get_db_connection()
+    with conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE acciones SET alert_up_sent = FALSE, alert_down_sent = FALSE WHERE symbol = %s",
+                (symbol,)
+            )
+    conn.close()
+
+
 # ============================================================
 # API – ACCIONES
 # ============================================================
@@ -134,10 +157,11 @@ def get_settings():
 @app.route("/api/actions", methods=["GET"])
 def api_get_actions():
     acciones = get_all_acciones()
-    # Respuesta tipo dict por symbol, similar a tu JSON original
+    # Respuesta tipo dict por symbol
     data = {}
     for row in acciones:
         data[row["symbol"]] = {
+            "base_price": float(row["base_price"]) if row["base_price"] is not None else None,
             "up": float(row["up"]),
             "down": float(row["down"]),
             "anotacion_up": row["anotacion_up"] or "",
@@ -151,39 +175,44 @@ def api_get_actions():
 def api_add_action():
     req = request.json or {}
     symbol = req.get("symbol", "").upper().strip()
+    base_price = req.get("base_price")
     up = req.get("up")
     down = req.get("down")
     anotacion_up = (req.get("anotacion_up") or "").strip()
     anotacion_down = (req.get("anotacion_down") or "").strip()
 
-    if not symbol or up is None or down is None:
-        return jsonify({"error": "symbol, up y down son obligatorios"}), 400
+    if not symbol or base_price is None or up is None or down is None:
+        return jsonify({"error": "symbol, base_price, up y down son obligatorios"}), 400
 
     try:
+        base_price = float(base_price)
         up = float(up)
         down = float(down)
     except ValueError:
-        return jsonify({"error": "up y down deben ser numéricos"}), 400
+        return jsonify({"error": "base_price, up y down deben ser numéricos"}), 400
 
     conn = get_db_connection()
     with conn:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                INSERT INTO acciones (symbol, up, down, anotacion_up, anotacion_down, active)
-                VALUES (%s, %s, %s, %s, %s, TRUE)
+                INSERT INTO acciones (symbol, base_price, up, down, anotacion_up, anotacion_down, alert_up_sent, alert_down_sent, active)
+                VALUES (%s, %s, %s, %s, %s, %s, FALSE, FALSE, TRUE)
                 ON CONFLICT (symbol) DO UPDATE
-                SET up = EXCLUDED.up,
-                    down = EXCLUDED.down,
+                SET base_price   = EXCLUDED.base_price,
+                    up           = EXCLUDED.up,
+                    down         = EXCLUDED.down,
                     anotacion_up = EXCLUDED.anotacion_up,
                     anotacion_down = EXCLUDED.anotacion_down,
-                    active = TRUE;
+                    alert_up_sent   = FALSE,
+                    alert_down_sent = FALSE,
+                    active       = TRUE;
                 """,
-                (symbol, up, down, anotacion_up, anotacion_down)
+                (symbol, base_price, up, down, anotacion_up, anotacion_down)
             )
     conn.close()
 
-    save_log(f"Añadida/Actualizada acción {symbol} (up={up}, down={down})")
+    save_log(f"Añadida/Actualizada acción {symbol} (base={base_price}, up={up}, down={down})")
     return jsonify({"ok": True})
 
 
@@ -196,6 +225,10 @@ def api_update_action():
 
     fields = []
     values = []
+
+    if "base_price" in req and req["base_price"] is not None:
+        fields.append("base_price = %s")
+        values.append(float(req["base_price"]))
 
     if "up" in req and req["up"] is not None:
         fields.append("up = %s")
@@ -216,6 +249,10 @@ def api_update_action():
     if "active" in req and req["active"] is not None:
         fields.append("active = %s")
         values.append(bool(req["active"]))
+
+    # Siempre que se actualice algo, reseteamos las alertas
+    fields.append("alert_up_sent = FALSE")
+    fields.append("alert_down_sent = FALSE")
 
     if not fields:
         return jsonify({"error": "Nada para actualizar"}), 400
@@ -304,7 +341,6 @@ def api_get_logs():
             rows = cur.fetchall()
     conn.close()
 
-    # Formato parecido al que tenías en texto
     lines = []
     for row in rows:
         ts = row["created_at"].astimezone(
@@ -316,15 +352,63 @@ def api_get_logs():
 
 
 # ============================================================
-# ROBOT 24/7
+# ROBOT 24/7 (LÓGICA NUEVA: RANGO CON MEMORIA)
 # ============================================================
+
+def procesar_accion(row, precio_actual):
+    """
+    Devuelve (tipo_alerta, mensaje) o (None, None)
+    tipo_alerta: "ALZA" / "BAJA"
+    """
+    symbol = row["symbol"]
+    base_price = row.get("base_price")
+    up_level = float(row["up"])
+    down_level = float(row["down"])
+    anot_up = row["anotacion_up"] or ""
+    anot_down = row["anotacion_down"] or ""
+    alert_up_sent = bool(row.get("alert_up_sent"))
+    alert_down_sent = bool(row.get("alert_down_sent"))
+
+    # Porcentaje vs precio base (si se cargó)
+    cambio_pct = None
+    if base_price is not None:
+        try:
+            base_f = float(base_price)
+            if base_f != 0:
+                cambio_pct = (precio_actual - base_f) / base_f * 100.0
+        except Exception:
+            cambio_pct = None
+
+    tipo = None
+    msg = None
+
+    # ⚡ ALERTA ALZA: rompe techo y todavía no avisó
+    if precio_actual >= up_level and not alert_up_sent:
+        tipo = "ALZA"
+        msg = f"📈 {symbol} rompió el techo de {up_level:.2f} → {precio_actual:.2f}"
+        if base_price is not None and cambio_pct is not None:
+            msg += f"\nPrecio base: {base_f:.2f} ({cambio_pct:+.2f}%)"
+        if anot_up:
+            msg += f"\n📝 Nota alza: {anot_up}"
+
+    # ⚡ ALERTA BAJA: rompe piso y todavía no avisó
+    elif precio_actual <= down_level and not alert_down_sent:
+        tipo = "BAJA"
+        msg = f"📉 {symbol} rompió el piso de {down_level:.2f} → {precio_actual:.2f}"
+        if base_price is not None and cambio_pct is not None:
+            msg += f"\nPrecio base: {base_f:.2f} ({cambio_pct:+.2f}%)"
+        if anot_down:
+            msg += f"\n📝 Nota baja: {anot_down}"
+
+    return tipo, msg
+
 
 def robot_loop():
     global robot_running
     tz_ar = pytz.timezone("America/Argentina/Buenos_Aires")
     last_run = set()
 
-    save_log("Robot iniciado correctamente (PostgreSQL).")
+    save_log("Robot iniciado correctamente (PostgreSQL, lógica de rango).")
 
     while robot_running:
         try:
@@ -344,43 +428,46 @@ def robot_loop():
                 acciones = get_all_acciones()
                 save_log(f"Chequeo programado → {now_ar.strftime('%H:%M')}")
 
-                for row in acciones:
-                    if not row["active"]:
-                        continue
+                conn = get_db_connection()
+                with conn:
+                    with conn.cursor() as cur:
+                        for row in acciones:
+                            if not row["active"]:
+                                continue
 
-                    symbol = row["symbol"]
-                    up_level = float(row["up"])
-                    down_level = float(row["down"])
-                    anot_up = row["anotacion_up"] or ""
-                    anot_down = row["anotacion_down"] or ""
+                            symbol = row["symbol"]
 
-                    try:
-                        data = yf.Ticker(symbol).history(period="1d", interval="1m")
-                        precio = float(data["Close"].iloc[-1])
-                    except Exception as e:
-                        save_log(f"Error obteniendo precio de {symbol}: {e}")
-                        continue
+                            # Obtener precio actual
+                            try:
+                                data = yf.Ticker(symbol).history(period="1d", interval="1m")
+                                precio = float(data["Close"].iloc[-1])
+                            except Exception as e:
+                                save_log(f"Error obteniendo precio de {symbol}: {e}")
+                                continue
 
-                    # Alza
-                    if precio >= up_level:
-                        msg = f"📈 {symbol} está por ENCIMA de {up_level:.2f} → {precio:.2f}"
-                        if anot_up:
-                            msg += f"\n📝 Nota: {anot_up}"
-                        enviar_telegram(token, chat_id, msg)
-                        save_log(msg)
+                            tipo_alerta, msg = procesar_accion(row, precio)
 
-                    # Baja
-                    if precio <= down_level:
-                        msg = f"📉 {symbol} está por DEBAJO de {down_level:.2f} → {precio:.2f}"
-                        if anot_down:
-                            msg += f"\n📝 Nota: {anot_down}"
-                        enviar_telegram(token, chat_id, msg)
-                        save_log(msg)
+                            if msg:
+                                enviar_telegram(token, chat_id, msg)
+                                save_log(msg)
+
+                                # Marcar bandera correspondiente para no repetir alerta
+                                if tipo_alerta == "ALZA":
+                                    cur.execute(
+                                        "UPDATE acciones SET alert_up_sent = TRUE WHERE id = %s",
+                                        (row["id"],)
+                                    )
+                                elif tipo_alerta == "BAJA":
+                                    cur.execute(
+                                        "UPDATE acciones SET alert_down_sent = TRUE WHERE id = %s",
+                                        (row["id"],)
+                                    )
+
+                conn.close()
 
             time.sleep(30)
 
         except Exception as e:
-            # Nunca matamos el hilo, sólo logueamos
             save_log(f"Error en robot_loop: {e}")
             time.sleep(30)
 
